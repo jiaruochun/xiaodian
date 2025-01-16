@@ -46,23 +46,11 @@
             z-index: 1001;
         }
 
-        .watermark {
-            position: fixed;
-            bottom: 50%;
-            right: 50%;
-            transform: translate(50%, 50%);
-            opacity: 0.1;
-            font-size: 5em;
-            color: #000;
-            z-index: 1000;
-            pointer-events: none;
-        }
-
         .chat-container {
             flex: 1;
             width: 80%;
             max-width: 800px;
-            margin: 60px auto 80px;
+            margin: 60px auto 80px; /* 上边距为标题高度，下边距为输入框高度 */
             background: white;
             box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
             border-radius: 10px;
@@ -83,7 +71,7 @@
             margin: 10px 0;
             padding: 10px;
             border-radius: 10px;
-            max-width: 80%;
+            max-width: 80%; /* 限制最大宽度 */
             word-wrap: break-word;
             position: relative;
         }
@@ -91,14 +79,14 @@
         .chat-window .user {
             background-color: #004aad;
             color: white;
-            align-self: flex-end;
-            text-align: left;
+            align-self: flex-end; /* 用户消息靠右 */
+            text-align: left; /* 文字内容左对齐 */
         }
 
         .chat-window .bot {
             background-color: #f1f1f1;
             color: #333;
-            align-self: flex-start;
+            align-self: flex-start; /* 机器人消息靠左 */
             text-align: left;
         }
 
@@ -144,7 +132,6 @@
 <body>
     <!-- 测试版标签 -->
     <div class="beta-label">测试版</div>
-    <div class="watermark">测试版</div>
 
     <header>
         <h1>智能客服系统</h1>
@@ -169,21 +156,26 @@
 
             if (userInput.value.trim() === '') return;
 
+            // 显示用户消息
             const userMessage = document.createElement('p');
             userMessage.className = 'user';
             userMessage.textContent = userInput.value;
             chatWindow.appendChild(userMessage);
 
-            const userMessageContent = userInput.value;
+            // 清空输入框
+            const userMessageContent = userInput.value; // 保存用户输入的内容
             userInput.value = '';
 
+            // 创建机器人消息容器
             const botMessage = document.createElement('p');
             botMessage.className = 'bot';
             chatWindow.appendChild(botMessage);
 
+            // 滚动到底部
             chatWindow.scrollTop = chatWindow.scrollHeight;
 
             try {
+                // 打印调试信息
                 console.log("用户输入的内容：", userMessageContent);
 
                 const response = await fetch(`${BASE_URL}/v1/chat/completions`, {
@@ -196,12 +188,13 @@
                         model: 'deepseek-chat',
                         messages: [
                             { role: 'system', content: 'You are a helpful assistant' },
-                            { role: 'user', content: userMessageContent }
+                            { role: 'user', content: userMessageContent } // 使用用户输入的内容
                         ],
                         stream: false
                     })
                 });
 
+                // 打印 API 响应
                 console.log("API 响应：", response);
 
                 const data = await response.json();
@@ -209,6 +202,7 @@
 
                 const botResponse = data.choices[0].message.content;
 
+                // 逐字显示机器人回复
                 let index = 0;
                 const interval = setInterval(() => {
                     if (index < botResponse.length) {
@@ -218,7 +212,7 @@
                     } else {
                         clearInterval(interval);
                     }
-                }, 50);
+                }, 50); // 每 50 毫秒显示一个字
             } catch (error) {
                 botMessage.textContent = '抱歉，我暂时无法处理您的请求。';
                 console.error('Error:', error);
