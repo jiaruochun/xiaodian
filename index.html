@@ -12,8 +12,6 @@
             background-color: #f4f4f9;
             display: flex;
             flex-direction: column;
-            align-items: center;
-            justify-content: center;
             height: 100vh;
         }
 
@@ -25,6 +23,9 @@
             color: white;
             width: 100%;
             padding: 10px 0;
+            position: fixed;
+            top: 0;
+            z-index: 1000;
         }
 
         header h1 {
@@ -32,9 +33,24 @@
             margin: 0;
         }
 
+        .beta-label {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            background-color: #ffcc00;
+            color: #000;
+            padding: 5px 10px;
+            border-radius: 5px;
+            font-size: 0.8em;
+            font-weight: bold;
+            z-index: 1001;
+        }
+
         .chat-container {
+            flex: 1;
             width: 80%;
             max-width: 800px;
+            margin: 60px auto 80px; /* 上边距为标题高度，下边距为输入框高度 */
             background: white;
             box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
             border-radius: 10px;
@@ -47,27 +63,46 @@
             flex: 1;
             padding: 15px;
             overflow-y: auto;
-            max-height: 500px;
+            display: flex;
+            flex-direction: column;
         }
 
         .chat-window p {
             margin: 10px 0;
+            padding: 10px;
+            border-radius: 10px;
+            max-width: 80%; /* 限制最大宽度 */
+            word-wrap: break-word;
+            position: relative;
         }
 
         .chat-window .user {
-            text-align: right;
-            color: #004aad;
+            background-color: #004aad;
+            color: white;
+            align-self: flex-end; /* 用户消息靠右 */
+            text-align: left; /* 文字内容左对齐 */
         }
 
         .chat-window .bot {
+            background-color: #f1f1f1;
+            color: #333;
+            align-self: flex-start; /* 机器人消息靠左 */
             text-align: left;
-            color: #555;
         }
 
         .input-container {
             display: flex;
             border-top: 1px solid #ddd;
             padding: 10px;
+            background-color: white;
+            position: fixed;
+            bottom: 0;
+            width: 100%;
+            max-width: 800px;
+            margin: 0 auto;
+            left: 0;
+            right: 0;
+            box-sizing: border-box;
         }
 
         .input-container input {
@@ -92,24 +127,12 @@
         .input-container button:hover {
             background-color: #00327d;
         }
-
-        .loading {
-            display: inline-block;
-            width: 20px;
-            height: 20px;
-            border: 3px solid #f3f3f3;
-            border-top: 3px solid #004aad;
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-        }
-
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
     </style>
 </head>
 <body>
+    <!-- 测试版标签 -->
+    <div class="beta-label">测试版</div>
+
     <header>
         <h1>智能客服系统</h1>
     </header>
@@ -117,10 +140,10 @@
         <div class="chat-window" id="chat-window">
             <p class="bot">您好！我是您的智能客服，请问有什么可以帮助您？</p>
         </div>
-        <div class="input-container">
-            <input type="text" id="user-input" placeholder="请输入您的问题..." onkeypress="handleKeyPress(event)">
-            <button onclick="sendMessage()">发送</button>
-        </div>
+    </div>
+    <div class="input-container">
+        <input type="text" id="user-input" placeholder="请输入您的问题..." onkeypress="handleKeyPress(event)">
+        <button onclick="sendMessage()">发送</button>
     </div>
 
     <script>
@@ -131,10 +154,7 @@
             const userInput = document.getElementById('user-input');
             const chatWindow = document.getElementById('chat-window');
 
-            if (userInput.value.trim() === '') {
-                alert('请输入有效内容。');
-                return;
-            }
+            if (userInput.value.trim() === '') return;
 
             // 显示用户消息
             const userMessage = document.createElement('p');
@@ -142,17 +162,22 @@
             userMessage.textContent = userInput.value;
             chatWindow.appendChild(userMessage);
 
-            // 显示加载动画
-            const loadingMessage = document.createElement('p');
-            loadingMessage.className = 'bot';
-            const loadingSpinner = document.createElement('div');
-            loadingSpinner.className = 'loading';
-            loadingMessage.appendChild(loadingSpinner);
-            chatWindow.appendChild(loadingMessage);
+            // 清空输入框
+            const userMessageContent = userInput.value; // 保存用户输入的内容
+            userInput.value = '';
 
+            // 创建机器人消息容器
+            const botMessage = document.createElement('p');
+            botMessage.className = 'bot';
+            chatWindow.appendChild(botMessage);
+
+            // 滚动到底部
             chatWindow.scrollTop = chatWindow.scrollHeight;
 
             try {
+                // 打印调试信息
+                console.log("用户输入的内容：", userMessageContent);
+
                 const response = await fetch(`${BASE_URL}/v1/chat/completions`, {
                     method: 'POST',
                     headers: {
@@ -163,22 +188,35 @@
                         model: 'deepseek-chat',
                         messages: [
                             { role: 'system', content: 'You are a helpful assistant' },
-                            { role: 'user', content: userInput.value }
+                            { role: 'user', content: userMessageContent } // 使用用户输入的内容
                         ],
                         stream: false
                     })
                 });
 
+                // 打印 API 响应
+                console.log("API 响应：", response);
+
                 const data = await response.json();
-                loadingMessage.removeChild(loadingSpinner);
-                loadingMessage.textContent = data.choices[0].message.content;
+                console.log("API 返回的数据：", data);
+
+                const botResponse = data.choices[0].message.content;
+
+                // 逐字显示机器人回复
+                let index = 0;
+                const interval = setInterval(() => {
+                    if (index < botResponse.length) {
+                        botMessage.textContent = botResponse.slice(0, index + 1);
+                        index++;
+                        chatWindow.scrollTop = chatWindow.scrollHeight;
+                    } else {
+                        clearInterval(interval);
+                    }
+                }, 50); // 每 50 毫秒显示一个字
             } catch (error) {
-                loadingMessage.textContent = '抱歉，我暂时无法处理您的请求。';
+                botMessage.textContent = '抱歉，我暂时无法处理您的请求。';
                 console.error('Error:', error);
             }
-
-            userInput.value = '';
-            chatWindow.scrollTop = chatWindow.scrollHeight;
         }
 
         function handleKeyPress(event) {
