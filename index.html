@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>智能客服系统</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f4f9;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+        }
+
+        header {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: #004aad;
+            color: white;
+            width: 100%;
+            padding: 10px 0;
+        }
+
+        header h1 {
+            font-size: 1.5em;
+            margin: 0;
+        }
+
+        .chat-container {
+            width: 80%;
+            max-width: 800px;
+            background: white;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+            border-radius: 10px;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .chat-window {
+            flex: 1;
+            padding: 15px;
+            overflow-y: auto;
+            max-height: 500px;
+        }
+
+        .chat-window p {
+            margin: 10px 0;
+        }
+
+        .chat-window .user {
+            text-align: right;
+            color: #004aad;
+        }
+
+        .chat-window .bot {
+            text-align: left;
+            color: #555;
+        }
+
+        .input-container {
+            display: flex;
+            border-top: 1px solid #ddd;
+            padding: 10px;
+        }
+
+        .input-container input {
+            flex: 1;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 1em;
+        }
+
+        .input-container button {
+            margin-left: 10px;
+            padding: 10px 20px;
+            background-color: #004aad;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 1em;
+        }
+
+        .input-container button:hover {
+            background-color: #00327d;
+        }
+
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #004aad;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>智能客服系统</h1>
+    </header>
+    <div class="chat-container">
+        <div class="chat-window" id="chat-window">
+            <p class="bot">您好！我是您的智能客服，请问有什么可以帮助您？</p>
+        </div>
+        <div class="input-container">
+            <input type="text" id="user-input" placeholder="请输入您的问题..." onkeypress="handleKeyPress(event)">
+            <button onclick="sendMessage()">发送</button>
+        </div>
+    </div>
+
+    <script>
+        const API_KEY = "sk-6f98352303fe44caa159931887be696a";
+        const BASE_URL = "https://api.deepseek.com";
+
+        async function sendMessage() {
+            const userInput = document.getElementById('user-input');
+            const chatWindow = document.getElementById('chat-window');
+
+            if (userInput.value.trim() === '') {
+                alert('请输入有效内容。');
+                return;
+            }
+
+            // 显示用户消息
+            const userMessage = document.createElement('p');
+            userMessage.className = 'user';
+            userMessage.textContent = userInput.value;
+            chatWindow.appendChild(userMessage);
+
+            // 显示加载动画
+            const loadingMessage = document.createElement('p');
+            loadingMessage.className = 'bot';
+            const loadingSpinner = document.createElement('div');
+            loadingSpinner.className = 'loading';
+            loadingMessage.appendChild(loadingSpinner);
+            chatWindow.appendChild(loadingMessage);
+
+            chatWindow.scrollTop = chatWindow.scrollHeight;
+
+            try {
+                const response = await fetch(`${BASE_URL}/v1/chat/completions`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${API_KEY}`
+                    },
+                    body: JSON.stringify({
+                        model: 'deepseek-chat',
+                        messages: [
+                            { role: 'system', content: 'You are a helpful assistant' },
+                            { role: 'user', content: userInput.value }
+                        ],
+                        stream: false
+                    })
+                });
+
+                const data = await response.json();
+                loadingMessage.removeChild(loadingSpinner);
+                loadingMessage.textContent = data.choices[0].message.content;
+            } catch (error) {
+                loadingMessage.textContent = '抱歉，我暂时无法处理您的请求。';
+                console.error('Error:', error);
+            }
+
+            userInput.value = '';
+            chatWindow.scrollTop = chatWindow.scrollHeight;
+        }
+
+        function handleKeyPress(event) {
+            if (event.key === 'Enter') {
+                sendMessage();
+            }
+        }
+    </script>
+</body>
+</html>
