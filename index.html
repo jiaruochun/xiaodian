@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>智能客服系统</title>
+    <title>呼和浩特供电公司 - 电力智能客服</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -19,7 +19,7 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            background-color: #004aad;
+            background-color: #008965; /* 主题色改为 #008965 */
             color: white;
             width: 100%;
             padding: 10px 0;
@@ -31,19 +31,6 @@
         header h1 {
             font-size: 1.5em;
             margin: 0;
-        }
-
-        .beta-label {
-            position: fixed;
-            top: 10px;
-            right: 10px;
-            background-color: #ffcc00;
-            color: #000;
-            padding: 5px 10px;
-            border-radius: 5px;
-            font-size: 0.8em;
-            font-weight: bold;
-            z-index: 1001;
         }
 
         .chat-container {
@@ -77,7 +64,7 @@
         }
 
         .chat-window .user {
-            background-color: #004aad;
+            background-color: #008965; /* 主题色改为 #008965 */
             color: white;
             align-self: flex-end; /* 用户消息靠右 */
             text-align: left; /* 文字内容左对齐 */
@@ -116,7 +103,7 @@
         .input-container button {
             margin-left: 10px;
             padding: 10px 20px;
-            background-color: #004aad;
+            background-color: #008965; /* 主题色改为 #008965 */
             color: white;
             border: none;
             border-radius: 5px;
@@ -125,20 +112,17 @@
         }
 
         .input-container button:hover {
-            background-color: #00327d;
+            background-color: #006f4f; /* 更深的绿色 */
         }
     </style>
 </head>
 <body>
-    <!-- 测试版标签 -->
-    <div class="beta-label">测试版</div>
-
     <header>
-        <h1>智能客服系统</h1>
+        <h1>呼和浩特供电公司 - 电力智能客服</h1>
     </header>
     <div class="chat-container">
         <div class="chat-window" id="chat-window">
-            <p class="bot">您好！我是您的智能客服，请问有什么可以帮助您？</p>
+            <p class="bot">您好！欢迎使用呼和浩特供电公司电力智能客服。请问您需要什么帮助？</p>
         </div>
     </div>
     <div class="input-container">
@@ -149,6 +133,14 @@
     <script>
         const API_KEY = "sk-6f98352303fe44caa159931887be696a";
         const BASE_URL = "https://api.deepseek.com";
+
+        // 存储对话历史
+        let conversationHistory = [
+            {
+                role: 'system',
+                content: '你是呼和浩特供电公司的电力智能客服，你的任务是帮助用户解决电力相关的问题。请以专业、友好、耐心的客服态度回答用户的问题，语气要礼貌、清晰、简洁。如果遇到无法解决的问题，请引导用户联系人工客服。'
+            }
+        ];
 
         async function sendMessage() {
             const userInput = document.getElementById('user-input');
@@ -162,8 +154,10 @@
             userMessage.textContent = userInput.value;
             chatWindow.appendChild(userMessage);
 
+            // 将用户消息添加到对话历史
+            conversationHistory.push({ role: 'user', content: userInput.value });
+
             // 清空输入框
-            const userMessageContent = userInput.value; // 保存用户输入的内容
             userInput.value = '';
 
             // 创建机器人消息容器
@@ -175,9 +169,7 @@
             chatWindow.scrollTop = chatWindow.scrollHeight;
 
             try {
-                // 打印调试信息
-                console.log("用户输入的内容：", userMessageContent);
-
+                // 使用流式传输 API
                 const response = await fetch(`${BASE_URL}/v1/chat/completions`, {
                     method: 'POST',
                     headers: {
@@ -186,35 +178,48 @@
                     },
                     body: JSON.stringify({
                         model: 'deepseek-chat',
-                        messages: [
-                            { role: 'system', content: 'You are a helpful assistant' },
-                            { role: 'user', content: userMessageContent } // 使用用户输入的内容
-                        ],
-                        stream: false
+                        messages: conversationHistory, // 传递对话历史
+                        stream: true // 启用流式传输
                     })
                 });
 
-                // 打印 API 响应
-                console.log("API 响应：", response);
+                // 读取流式数据
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder();
+                let result = '';
 
-                const data = await response.json();
-                console.log("API 返回的数据：", data);
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
 
-                const botResponse = data.choices[0].message.content;
+                    // 解码数据
+                    const chunk = decoder.decode(value);
+                    const lines = chunk.split('\n');
 
-                // 逐字显示机器人回复
-                let index = 0;
-                const interval = setInterval(() => {
-                    if (index < botResponse.length) {
-                        botMessage.textContent = botResponse.slice(0, index + 1);
-                        index++;
-                        chatWindow.scrollTop = chatWindow.scrollHeight;
-                    } else {
-                        clearInterval(interval);
+                    for (const line of lines) {
+                        if (line.trim() === '') continue;
+
+                        try {
+                            // 解析 JSON 数据
+                            const data = JSON.parse(line.replace('data: ', ''));
+                            if (data.choices && data.choices[0].delta.content) {
+                                result += data.choices[0].delta.content;
+
+                                // 将换行符转换为 <br> 标签
+                                const formattedResult = result.replace(/\n/g, '<br>');
+                                botMessage.innerHTML = formattedResult; // 使用 innerHTML 支持 HTML 标签
+                                chatWindow.scrollTop = chatWindow.scrollHeight;
+                            }
+                        } catch (error) {
+                            console.error('解析 JSON 失败：', error);
+                        }
                     }
-                }, 50); // 每 50 毫秒显示一个字
+                }
+
+                // 将机器人回复添加到对话历史
+                conversationHistory.push({ role: 'assistant', content: result });
             } catch (error) {
-                botMessage.textContent = '抱歉，我暂时无法处理您的请求。';
+                botMessage.textContent = '抱歉，我暂时无法处理您的请求。请稍后再试或联系人工客服。';
                 console.error('Error:', error);
             }
         }
