@@ -43,9 +43,13 @@
         }
 
         header h1 {
-            font-size: 1.5em;
             margin: 0;
             font-weight: 500; /* 中等字重 */
+            font-size: clamp(1rem, 6vw, 1.5rem); /* 动态调整字体大小 */
+            white-space: nowrap; /* 防止标题换行 */
+            overflow: hidden;
+            text-overflow: ellipsis; /* 标题过长时显示省略号 */
+            max-width: 70%; /* 限制标题宽度 */
         }
 
         .beta-tag {
