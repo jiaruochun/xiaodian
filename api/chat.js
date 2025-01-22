@@ -12,12 +12,12 @@ export default async function handler(req, res) {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'Authorization': `Bearer ${process.env.DEEPSEEK_API_KEY}` // 从环境变量中读取 API 密钥
+                'Authorization': `Bearer ${process.env.DEEPSEEK_API_KEY}`
             },
             body: JSON.stringify({
                 model: 'deepseek-chat',
                 messages: messages,
-                stream: false // 如果需要流式传输，可以改为 true
+                stream: true // 启用流式传输
             })
         });
 
@@ -25,8 +25,25 @@ export default async function handler(req, res) {
             throw new Error(`API 请求失败: ${response.statusText}`);
         }
 
-        const data = await response.json();
-        res.status(200).json(data);
+        // 设置响应头为流式传输
+        res.setHeader('Content-Type', 'text/event-stream');
+        res.setHeader('Cache-Control', 'no-cache');
+        res.setHeader('Connection', 'keep-alive');
+
+        // 将流式数据传递给前端
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+
+        while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+
+            const chunk = decoder.decode(value);
+            res.write(chunk);
+            res.flush();
+        }
+
+        res.end();
     } catch (error) {
         console.error('Error:', error);
         res.status(500).json({ message: '服务器错误，请稍后再试' });
