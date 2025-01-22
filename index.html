@@ -184,13 +184,10 @@
             animation: fadeIn 0.3s ease;
         }
     </style>
-    <!-- 引入 Material Design 字体 -->
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500&display=swap" rel="stylesheet">
 </head>
 <body>
-    <!-- 测试版标签 -->
     <div class="beta-tag">测试版</div>
-
     <header>
         <h1>呼供小电</h1>
     </header>
@@ -203,9 +200,6 @@
     </div>
 
     <script>
-        const API_KEY = "sk-6f98352303fe44caa159931887be696a";
-        const BASE_URL = "https://api.deepseek.com";
-
         // 存储对话历史
         let conversationHistory = [
             {
@@ -241,55 +235,29 @@
             chatWindow.scrollTop = chatWindow.scrollHeight;
 
             try {
-                // 使用流式传输 API
-                const response = await fetch(`${BASE_URL}/v1/chat/completions`, {
+                // 调用后端 API
+                const response = await fetch('/api/chat', {
                     method: 'POST',
                     headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${API_KEY}`
+                        'Content-Type': 'application/json'
                     },
                     body: JSON.stringify({
-                        model: 'deepseek-chat',
-                        messages: conversationHistory, // 传递对话历史
-                        stream: true // 启用流式传输
+                        messages: conversationHistory
                     })
                 });
 
-                // 读取流式数据
-                const reader = response.body.getReader();
-                const decoder = new TextDecoder();
-                let result = '';
-
-                while (true) {
-                    const { done, value } = await reader.read();
-                    if (done) break;
-
-                    // 解码数据
-                    const chunk = decoder.decode(value);
-                    const lines = chunk.split('\n');
-
-                    for (const line of lines) {
-                        if (line.trim() === '') continue;
-
-                        try {
-                            // 解析 JSON 数据
-                            const data = JSON.parse(line.replace('data: ', ''));
-                            if (data.choices && data.choices[0].delta.content) {
-                                result += data.choices[0].delta.content;
-
-                                // 将换行符转换为 <br> 标签
-                                const formattedResult = result.replace(/\n/g, '<br>');
-                                botMessage.innerHTML = formattedResult; // 使用 innerHTML 支持 HTML 标签
-                                chatWindow.scrollTop = chatWindow.scrollHeight;
-                            }
-                        } catch (error) {
-                            console.error('解析 JSON 失败：', error);
-                        }
-                    }
+                if (!response.ok) {
+                    throw new Error('请求失败');
                 }
 
+                const data = await response.json();
+                const botResponse = data.choices[0].message.content;
+
+                // 显示机器人回复
+                botMessage.textContent = botResponse;
+
                 // 将机器人回复添加到对话历史
-                conversationHistory.push({ role: 'assistant', content: result });
+                conversationHistory.push({ role: 'assistant', content: botResponse });
             } catch (error) {
                 botMessage.textContent = '抱歉，我暂时无法处理您的请求。请稍后再试或联系人工客服。';
                 console.error('Error:', error);
