@@ -3,10 +3,11 @@
   "version": "1.0.0",
   "description": "呼和浩特供电公司电力智能客服",
   "main": "index.html",
+  "type": "module", // 启用 ES 模块支持
   "scripts": {
     "start": "vercel dev"
   },
   "dependencies": {
-    "node-fetch": "^3.3.0"
+    "node-fetch": "^3.3.0" // 使用 node-fetch v3
   }
 }
