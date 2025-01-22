@@ -17,11 +17,13 @@ export default async function handler(req, res) {
             body: JSON.stringify({
                 model: 'deepseek-chat',
                 messages: messages,
-                stream: true // 启用流式传输
+                stream: true
             })
         });
 
         if (!response.ok) {
+            const errorResponse = await response.text();
+            console.error('API 请求失败:', response.status, response.statusText, errorResponse);
             throw new Error(`API 请求失败: ${response.statusText}`);
         }
 
@@ -30,16 +32,11 @@ export default async function handler(req, res) {
         res.setHeader('Cache-Control', 'no-cache');
         res.setHeader('Connection', 'keep-alive');
 
-        // 将流式数据传递给前端
-        const reader = response.body.getReader();
-        const decoder = new TextDecoder();
-
-        while (true) {
-            const { done, value } = await reader.read();
-            if (done) break;
-
-            const chunk = decoder.decode(value);
-            res.write(chunk);
+        // 使用可读流读取数据
+        for await (const chunk of response.body) {
+            const decodedChunk = chunk.toString(); // 将 Buffer 转换为字符串
+            console.log('后端收到的流式数据:', decodedChunk); // 打印流式数据
+            res.write(decodedChunk);
             res.flush();
         }
 
