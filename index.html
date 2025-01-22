@@ -259,25 +259,19 @@ async function sendMessage() {
             const { done, value } = await reader.read();
             if (done) break;
 
-            // 解码数据
             const chunk = decoder.decode(value);
-            console.log('原始流式数据:', chunk); // 打印原始数据
+            console.log('前端收到的流式数据:', chunk); // 打印流式数据
 
             const lines = chunk.split('\n');
             for (const line of lines) {
                 if (line.trim() === '') continue;
 
                 try {
-                    // 解析 JSON 数据
                     const data = JSON.parse(line.replace('data: ', ''));
-                    console.log('解析后的数据:', data); // 打印解析后的数据
-
                     if (data.choices && data.choices[0].delta.content) {
                         result += data.choices[0].delta.content;
-
-                        // 将换行符转换为 <br> 标签
                         const formattedResult = result.replace(/\n/g, '<br>');
-                        botMessage.innerHTML = formattedResult; // 使用 innerHTML 支持 HTML 标签
+                        botMessage.innerHTML = formattedResult;
                         chatWindow.scrollTop = chatWindow.scrollHeight;
                     }
                 } catch (error) {
