@@ -1,0 +1,12 @@
+{
+  "name": "hugong-xiaodian",
+  "version": "1.0.0",
+  "description": "呼和浩特供电公司电力智能客服",
+  "main": "index.html",
+  "scripts": {
+    "start": "vercel dev"
+  },
+  "dependencies": {
+    "node-fetch": "^3.3.0"
+  }
+}
