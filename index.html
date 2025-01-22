@@ -208,88 +208,91 @@
             }
         ];
 
-        async function sendMessage() {
-            const userInput = document.getElementById('user-input');
-            const chatWindow = document.getElementById('chat-window');
+async function sendMessage() {
+    const userInput = document.getElementById('user-input');
+    const chatWindow = document.getElementById('chat-window');
 
-            if (userInput.value.trim() === '') return;
+    if (userInput.value.trim() === '') return;
 
-            // 显示用户消息
-            const userMessage = document.createElement('p');
-            userMessage.className = 'user';
-            userMessage.textContent = userInput.value;
-            chatWindow.appendChild(userMessage);
+    // 显示用户消息
+    const userMessage = document.createElement('p');
+    userMessage.className = 'user';
+    userMessage.textContent = userInput.value;
+    chatWindow.appendChild(userMessage);
 
-            // 将用户消息添加到对话历史
-            conversationHistory.push({ role: 'user', content: userInput.value });
+    // 将用户消息添加到对话历史
+    conversationHistory.push({ role: 'user', content: userInput.value });
 
-            // 清空输入框
-            userInput.value = '';
+    // 清空输入框
+    userInput.value = '';
 
-            // 创建机器人消息容器
-            const botMessage = document.createElement('p');
-            botMessage.className = 'bot';
-            chatWindow.appendChild(botMessage);
+    // 创建机器人消息容器
+    const botMessage = document.createElement('p');
+    botMessage.className = 'bot';
+    chatWindow.appendChild(botMessage);
 
-            // 滚动到底部
-            chatWindow.scrollTop = chatWindow.scrollHeight;
+    // 滚动到底部
+    chatWindow.scrollTop = chatWindow.scrollHeight;
 
-            try {
-                // 调用后端 API
-                const response = await fetch('/api/chat', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        messages: conversationHistory
-                    })
-                });
+    try {
+        // 调用后端 API
+        const response = await fetch('/api/chat', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                messages: conversationHistory
+            })
+        });
 
-                if (!response.ok) {
-                    throw new Error('请求失败');
-                }
+        if (!response.ok) {
+            throw new Error('请求失败');
+        }
 
-                // 读取流式数据
-                const reader = response.body.getReader();
-                const decoder = new TextDecoder();
-                let result = '';
+        // 读取流式数据
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let result = '';
 
-                while (true) {
-                    const { done, value } = await reader.read();
-                    if (done) break;
+        while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
 
-                    // 解码数据
-                    const chunk = decoder.decode(value);
-                    const lines = chunk.split('\n');
+            // 解码数据
+            const chunk = decoder.decode(value);
+            console.log('原始流式数据:', chunk); // 打印原始数据
 
-                    for (const line of lines) {
-                        if (line.trim() === '') continue;
+            const lines = chunk.split('\n');
+            for (const line of lines) {
+                if (line.trim() === '') continue;
 
-                        try {
-                            // 解析 JSON 数据
-                            const data = JSON.parse(line.replace('data: ', ''));
-                            if (data.choices && data.choices[0].delta.content) {
-                                result += data.choices[0].delta.content;
+                try {
+                    // 解析 JSON 数据
+                    const data = JSON.parse(line.replace('data: ', ''));
+                    console.log('解析后的数据:', data); // 打印解析后的数据
 
-                                // 将换行符转换为 <br> 标签
-                                const formattedResult = result.replace(/\n/g, '<br>');
-                                botMessage.innerHTML = formattedResult; // 使用 innerHTML 支持 HTML 标签
-                                chatWindow.scrollTop = chatWindow.scrollHeight;
-                            }
-                        } catch (error) {
-                            console.error('解析 JSON 失败：', error);
-                        }
+                    if (data.choices && data.choices[0].delta.content) {
+                        result += data.choices[0].delta.content;
+
+                        // 将换行符转换为 <br> 标签
+                        const formattedResult = result.replace(/\n/g, '<br>');
+                        botMessage.innerHTML = formattedResult; // 使用 innerHTML 支持 HTML 标签
+                        chatWindow.scrollTop = chatWindow.scrollHeight;
                     }
+                } catch (error) {
+                    console.error('解析 JSON 失败：', error, '原始数据：', line);
                 }
-
-                // 将机器人回复添加到对话历史
-                conversationHistory.push({ role: 'assistant', content: result });
-            } catch (error) {
-                botMessage.textContent = '抱歉，我暂时无法处理您的请求。请稍后再试或联系人工客服。';
-                console.error('Error:', error);
             }
         }
+
+        // 将机器人回复添加到对话历史
+        conversationHistory.push({ role: 'assistant', content: result });
+    } catch (error) {
+        botMessage.textContent = '抱歉，我暂时无法处理您的请求。请稍后再试或联系人工客服。';
+        console.error('Error:', error);
+    }
+}
 
         function handleKeyPress(event) {
             if (event.key === 'Enter') {
