@@ -36,13 +36,14 @@ export default async function handler(req, res) {
         for await (const chunk of response.body) {
             const decodedChunk = chunk.toString(); // 将 Buffer 转换为字符串
             console.log('后端收到的流式数据:', decodedChunk); // 打印流式数据
-            res.write(decodedChunk);
-            res.flush();
+            res.write(decodedChunk); // 发送数据到前端
         }
 
-        res.end();
+        res.end(); // 结束响应
     } catch (error) {
         console.error('Error:', error);
-        res.status(500).json({ message: '服务器错误，请稍后再试' });
+        if (!res.headersSent) {
+            res.status(500).json({ message: '服务器错误，请稍后再试' });
+        }
     }
 }
